@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-base.Personio",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Development", "Developer Tools", "Miscellaneous"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://developer.personio.de/reference/auth-1"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://developer.personio.de/reference/introduction"
+			}
+		]
+	}
+}

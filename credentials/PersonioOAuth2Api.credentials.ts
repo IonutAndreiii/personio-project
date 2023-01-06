@@ -1,5 +1,4 @@
 import {
-	IAuthenticateGeneric,
 	ICredentialType,
 	INodeProperties,
 } from 'n8n-workflow';
@@ -11,12 +10,12 @@ export class PersonioOAuth2Api implements ICredentialType {
 
 	documentationUrl = 'https://developer.personio.de/reference/introduction';
 	properties: INodeProperties[] = [
-		//{
-		//	displayName: 'Grant Type',
-		//	name: 'grantType',
-		//	type: 'hidden',
-		//	default: 'clientCredentials',
-		//},
+		{
+			displayName: 'Grant Type',
+			name: 'grantType',
+			type: 'hidden',
+			default: 'clientCredentials',
+		},
 		{
 			displayName: 'Access Token URL',
 			name: 'accessTokenUrl',

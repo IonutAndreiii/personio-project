@@ -1,5 +1,6 @@
-import { INodeType, INodeTypeDescription } from 'n8n-workflow';
-//import { httpVerbFields, httpVerbOperations } from './HttpVerbDescription';
+import { IExecuteFunctions, IHttpRequestOptions, INodeExecutionData, INodeType, INodeTypeDescription } from 'n8n-workflow';
+import { OptionsWithUri } from 'request';
+import {EmployeeOperations, EmployeeFields} from './EmployeeDescription'
 
 export class Personio implements INodeType {
 	description: INodeTypeDescription = {
@@ -11,26 +12,17 @@ export class Personio implements INodeType {
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Personio API Operations',
 		defaults: {
-			name: 'Personio API Operations',
+			name: 'Personio',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
 		credentials: [
 			{
 				name: 'personioOAuth2Api',
-				required: false,
+				required: true,
 			},
 		],
-		requestDefaults: {
-			baseURL: 'https://api.personio.de/v1',
-			url: '',
-			headers: {
-				'Accept': 'application/json',
-				'Content-Type': 'application/json',
-			},
-		},
 		properties: [
-			// Resources and operations will go here
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -39,154 +31,79 @@ export class Personio implements INodeType {
 				options: [
 					{
 						name: 'Employee',
-						value: 'Employee',
+						value: 'employee',
 					},
 				],
-				default: 'Employee',
-			},
-			// Operations for Employee will go here
-      {
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['Employee'],
-					},
-				},
-				options: [
-					{
-						name: 'Get an Employee',
-						value: 'getAnEmployee',
-						action: 'Show employee by ID',
-						description: 'Show Employee By ID',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '=/company/employees/{{$parameters.employeeId}}',
-							},
-						},
-					},
-					{
-						name: 'List Employees',
-						value: 'listEmployees',
-						action: 'List company employees',
-						description: 'List Company Employees',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '=/company/employees',
-							},
-						},
-					},
-          {
-						name: 'Get an Employee Absence Balance',
-						value: 'getEmployeeAbsenceBalance',
-						action: 'Retrieve the absence balance for a specific employee',
-						description: 'Retrieve the absence balance for a specific employee',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '=/company/employees/{{$parameters.employee_id}}/absences/balance',
-							},
-						},
-					},
-          {
-						name: 'Get Employees Custom Attributes',
-						value: 'getEmployeesCustomAttributes',
-						action: 'Lists all the allowed custom atrributes per API credentials',
-						description: 'Lists all the allowed custom atrributes per API credentials',
-						routing: {
-							request: {
-								method: 'GET',
-								url: '=/company/employees/custom-attributes',
-							},
-						},
-					},
-				],
-				default: 'getAnEmployee',
+				default: 'employee',
 			},
 
-		   // Fields for Employee operation
-			// Fields for getAnEmployee operation
+// EMPLOYEE
+...EmployeeOperations,
+...EmployeeFields,
 
-						{
-							displayName: 'Employee ID',
-							description: 'Type in the Employee ID',
-							required: true,
-							name: 'employeeId',
-							type: 'string',
-							default: '',
-							hint: 'Numeric id of the employee',
-							displayOptions: {
-								show: {
-									resource: ['Employee'],
-									operation: ['getAnEmployee'],
-								},
-							},
-						},
-			//Fields for listEmployees operation
-			{
-				displayName: 'Email',
-				description: 'Type in the Employee Email',
-				name: 'employeeEmail',
-				type: 'string',
-				default: '',
-				hint: 'Find an employee with the given email address.',
-				displayOptions: {
-					show: {
-						resource: ['Employee'],
-						operation: ['listEmployees'],
-					},
-				},
-			},
-			{
-				displayName: 'Offset',
-				description: 'Type in the Employee Offset',
-				name: 'employeeOffset',
-				type: 'number',
-				default: '',
-				hint: 'Pagination attribute to identify the first item in the collection to return.',
-				displayOptions: {
-					show: {
-						resource: ['Employee'],
-						operation: ['listEmployees'],
-					},
-				},
-			},
-			{
-				displayName: 'Limit',
-				description: 'Type in the Employee Limit',
-				name: 'employeeLimit',
-				type: 'number',
-				default: '',
-				hint: 'Pagination attribute to limit the number of employees returned per page.',
-				displayOptions: {
-					show: {
-						resource: ['Employee'],
-						operation: ['listEmployees'],
-					},
-				},
-			},
-			//Fields for getEmployeeAbsenceBalance operation
-		  {
-				displayName: 'Employee ID',
-				description: 'Type in the Employee ID',
-				required: true,
-				name: 'employeeId',
-				type: 'string',
-				default: '',
-				hint: 'Numeric id of the employee',
-				displayOptions: {
-					show: {
-						resource: ['Employee'],
-						operation: ['getEmployeeAbsenceBalance'],
-					},
-				},
-			},
-			//Fields for getEmployeesCustomAttributes operation
-			//This operation has no fields
+
+
 		],
 	};
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		const items = this.getInputData();
+		let responseData;
+		const returnData = [];
+		const resource = this.getNodeParameter('resource', 0) as string;
+		const operation = this.getNodeParameter('operation', 0) as string;
+
+		let credentials = await this.getCredentials('personioOAuth2Api') as any;
+
+		const options: IHttpRequestOptions = {
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+			},
+			method: 'POST',
+			body: {
+				client_id: credentials.clientId,
+				client_secret: credentials.clientSecret
+			},
+			url: credentials.accessTokenUrl,
+			json: true,
+		};
+
+		responseData = await this.helpers.httpRequest(
+			options,
+		) as any;
+
+		const accessToken = responseData.data.token
+
+		for (let i = 0; i < items.length; i++) {
+
+
+			// Get Employees Custom Attributes
+			if (resource === 'employee') {
+				if (operation === 'getEmployeesCustomAttributes') {
+					const options: IHttpRequestOptions = {
+						headers: {
+							Accept: 'application/json',
+							'Content-Type': 'application/json',
+							authorization: `Bearer ${accessToken}`
+						},
+						method: 'GET',
+						body: {},
+						url: `https://api.personio.de/v1/company/employees/custom-attributes`,
+						json: true,
+					};
+
+					responseData = await this.helpers.httpRequest(
+						options,
+					);
+					returnData.push(responseData);
+
+				}
+			}
+
+		}
+
+
+		return [this.helpers.returnJsonArray(returnData)];
+	}
 }
